@@ -6,7 +6,7 @@
 /*   By: dthan <dthan@student.hive.fi>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/19 14:05:35 by dthan             #+#    #+#             */
-/*   Updated: 2025/03/20 23:29:09 by dthan            ###   ########.fr       */
+/*   Updated: 2025/04/04 09:55:51 by dthan            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
-#include <elf.h>
+#include <mach-o/loader.h>
 
 int	get_file_descriptor(char *file)
 {
@@ -39,6 +39,7 @@ struct stat *get_file_stat(int fd)
 		perror("fstat");
 		return (NULL);
 	}
+	// what if file_stat.st_size == 0
 	return (file_stat);
 }
 
@@ -60,38 +61,38 @@ void	print_symbol(void)
 }
 
 
-enum {
-	absolute_value = "A",
-	uninitialized_data_section = "B",
-	common = "C",
-	initialised_data_section = "D",
-	an_initialised_data_section_for_small_objects = "G",
-	debugging = "N",
-	a_read_only_data_section = "R",
-	an_uninitialized_data_section_for_small_objects = "S",
-	text_code_section = "T",
-	undefined = "U",
-	a_weak_object = "V",
-	"W" ,
+// enum {
+// 	absolute_value = "A",
+// 	uninitialized_data_section = "B",
+// 	common = "C",
+// 	initialised_data_section = "D",
+// 	an_initialised_data_section_for_small_objects = "G",
+// 	debugging = "N",
+// 	a_read_only_data_section = "R",
+// 	an_uninitialized_data_section_for_small_objects = "S",
+// 	text_code_section = "T",
+// 	undefined = "U",
+// 	a_weak_object = "V",
+// 	"W" ,
 
-} e_global_symbol_type;
+// } e_global_symbol_type;
 
-enum {
-	uninitialized_data_section = "b",
-	initialised_data_section = "d",
-	an_initialised_data_section_for_small_objects = "g",
-	// "i"
-	a_stack_unwind_section = "p",
-	a_read_only_data_section = "r",
-	an_uninitialized_data_section_for_small_objects = "s",
-	text_code_section = "t",
-	unique_global_symbol = "u",
-	a_weak_object = "v",
-	"w",
-	"-",
-	"?",
+// enum {
+// 	uninitialized_data_section = "b",
+// 	initialised_data_section = "d",
+// 	an_initialised_data_section_for_small_objects = "g",
+// 	// "i"
+// 	a_stack_unwind_section = "p",
+// 	a_read_only_data_section = "r",
+// 	an_uninitialized_data_section_for_small_objects = "s",
+// 	text_code_section = "t",
+// 	unique_global_symbol = "u",
+// 	a_weak_object = "v",
+// 	"w",
+// 	"-",
+// 	"?",
 
-} e_local_symbol_type;
+// } e_local_symbol_type;
 
 char get_symbol_type(Elf64_Sym *sym, Elf64_Shdr *shdr)
 {
@@ -120,33 +121,38 @@ void safe_write(const char *str)
 
 void parse_elf_symbols(void *map, struct stat *st)
 {
-	Elf64_Ehdr *ehdr = (Elf64_Ehdr *)map;
-	Elf64_Shdr *shdr = (Elf64_Shdr *)(map + ehdr->e_shoff);
-	Elf64_Shdr *strtab_shdr = &shdr[ehdr->e_shstrndx];
-	char *shstrtab = (char *)(map + strtab_shdr->sh_offset);
 
-	for (int i = 0; i < ehdr->e_shnum; i++)
-	{
-		if (shdr[i].sh_type == SHT_SYMTAB)
-		{
-			Elf64_Sym *symtab = (Elf64_Sym *)(map + shdr[i].sh_offset);
-			int symcount = shdr[i].sh_size / shdr[i].sh_entsize;
-			char *strtab = (char *)(map + shdr[shdr[i].sh_link].sh_offset);
+}
 
-			for (int j = 0; j < symcount; j++)
-			{
-				if (symtab[j].st_name == 0) continue;
+char get_symbol_letter(sym)
+{
+	if (N_S)
+}
 
-				char buffer[128];
-				snprintf(buffer, sizeof(buffer), "%016lx %c %s\n",
-					symtab[j].st_value,
-					get_symbol_type(&symtab[j], shdr),
-					&strtab[symtab[j].st_name]);
-				safe_write(buffer);
-			}
-			return;
+void handle_macho_file(void *file_memory)
+{
+	// header
+	struct mach_header_64 *header = (struct mach_header_64 *)file_memory;
+	// load commands
+	struct load_command *lc = (struct load_command *)(file_memory + sizeof(struct mach_header_64));
+	
+	for (int i = 0; i < header->ncmds; i++) {
+		if (lc->cmd == LC_SYMTAB) {
+			
 		}
 	}
+	// symbol table
+}
+
+
+void handel_file(void *file_memory)
+{
+	uint32_t magic = *(uint32_t *)(file_memory);
+
+	if (magic == MH_MAGIC_64)
+		handle_macho_file();
+	else
+		printf(stderr, "Not a 64-bit Mach-O file\n");
 }
 
 void	display_symbol_table(char *file)
@@ -156,11 +162,29 @@ void	display_symbol_table(char *file)
 	if (fd == -1) return ;
 	st = get_file_stat(fd);
 	if (st == NULL) return ;
-	void *map = get_memory_map(fd, st->st_size);
-	if (map == NULL) return ;
-	parse_elf_symbols(map, st);
+	void *file_memory = get_memory_map(fd, st->st_size);
+	if (file_memory == NULL) return ;
+	handle_file(file_memory);
+	munmap(file_memory, st->st_size);
 	close(fd);
 }
+
+
+#define N_UNDF 0x0
+#define N_ABS 0x2
+#define N_SECT 0xe
+#define N_PBUD 0xc
+#define N_INDR 0xa
+#define N_STAB 0xe0
+#define N_PEXT 0x10
+#define N_TYPE 0x0e
+#define N_EXT 0x1
+
+char	get_symbol_letter(sym)
+{
+	
+}
+
 
 int	main(int ac, char **av)
 {
