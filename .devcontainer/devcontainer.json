@@ -1,0 +1,16 @@
+{
+  "name": "Debian clang Dev Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  // forward any ports your app might use
+  "forwardPorts": [],
+
+  // install these VS Code extensions inside the container
+  "extensions": [
+    "ms-vscode.cpptools",
+    "ms-vscode.cmake-tools",
+    "ms-vscode.makefile-tools"
+  ],
+}

@@ -13,6 +13,7 @@ SRC_DIR := src
 
 # Source files
 SRC_FILES += $(SRC_DIR)/ft_nm.c
+SRC_FILES += $(SRC_DIR)/file_validation.c
 
 # Object files
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC_FILES))
