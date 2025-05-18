@@ -12,7 +12,7 @@ OBJ_DIR := obj
 SRC_DIR := src
 
 # Source files
-SRC_FILES += $(SRC_DIR)/ft_nm.c
+SRC_FILES += $(SRC_DIR)/main.c
 SRC_FILES += $(SRC_DIR)/file_validation.c
 
 # Object files

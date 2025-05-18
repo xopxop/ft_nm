@@ -5,55 +5,55 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: dthan <dthan@student.hive.fi>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/03/19 14:05:35 by dthan             #+#    #+#             */
-/*   Updated: 2025/05/16 06:57:56 by dthan            ###   ########.fr       */
+/*   Created: 2025/05/16 11:09:58 by dthan             #+#    #+#             */
+/*   Updated: 2025/05/16 11:56:09 by dthan            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/mman.h>
-#include <unistd.h>
-#include "helper.h"
-#include <stdio.h>
 #include <elf.h>
+#include <stddef.h>
 
-int	cleanup_file_resources_and_return(int value, int file_descriptor_to_close, void *file_mmap_to_free, size_t file_size)
+typedef struct s_list
 {
-	if (file_descriptor_to_close != -1)
-		close(file_descriptor_to_close);
-	if (file_mmap_to_free && file_size)
-		munmap(file_mmap_to_free, file_size);
-	return (value);
+	void		*content;
+	size_t		content_size;
+	struct s_list	*next;
+}	t_list;
+
+typedef struct s_symbol_entry
+{
+	void	*address;
+	char	*type;
+	char	*name;
+}	t_symbol_entry;
+
+t_list  *parse_section_header_symtab(void *file_map, Elf64_Off offset)
+{
+	Elf64_Sym *symtab = (Elf64_Sym *)(file_map + offset);
+	int sym_count = sizeof(symtab) / sizeof(Elf64_Sym);
+	t_list *list = NULL;
+
+	for (int i = 0; i < sym_count; i++)
+	{
+		t_symbol_entry *entry = malloc(sizeof(t_symbol_entry));
+		entry->address = (void *)(symtab[i].st_value);
+		entry->type = "symbol"; // Placeholder for actual type
+		entry->name = "symbol_name"; // Placeholder for actual name
+		list_add(&list, entry);
+	}
 }
 
-void	print_symbol_table(void *file_mmap)
+t_list *get_symbol_entry_list(void *file_map)
 {
-	// ELF header (Ehdr)
-	// Program header (Phdr)
-	// Section header (Shdr)
-	
-}
+	Elf64_Ehdr *eh = (Elf64_Ehdr *)file_map;
+	Elf64_Shdr *sh = (Elf64_Shdr *)(file_map + eh->e_shoff);
+	int i = 0;
 
-int	execute(char *file)
-{
-	int file_descriptor;
-	struct stat file_stat;
-	void *file_mmap;
-
-	file_descriptor = open(file, O_RDONLY);
-	if (file_descriptor == -1 || !valid_file(file_descriptor))
-		return cleanup_file_resources_and_return(-1, -1, NULL, 0);
-	if (fstat(file_descriptor, &file_stat) == -1)
-		return cleanup_file_resources_and_return(-1, file_descriptor, NULL, 0);
-	file_mmap = mmap(NULL, file_stat.st_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0);
-	if (file_mmap == NULL)
-		return cleanup_file_resources_and_return(-1, file_descriptor, NULL, 0);
-	print_symbol_table(file_mmap);
-	return cleanup_file_resources_and_return(0, file_descriptor, file_mmap, file_stat.st_size);
-}
-
-int	main(int ac, char **av)
-{
-	return execute("a.out");
+	while (i < eh->e_shnum)
+	{
+		if (sh[i].sh_type == SHT_SYMTAB)
+			return parse_section_header_symtab(file_map, sh[i].sh_offset);
+		i++;
+	}
+	return (NULL);
 }
