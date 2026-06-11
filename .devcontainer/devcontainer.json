@@ -2,7 +2,7 @@
   "name": "Debian clang Dev Container",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": "."
+    "context": ".."
   },
   // forward any ports your app might use
   "forwardPorts": [],
